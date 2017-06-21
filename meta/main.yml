@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: Jyry Suvilehto & Risto Laurikainen
+  description: Configure one or more GitLab runners.
+  company: CSC - IT Center for Science Ltd.
+  license: MIT
+  min_ansible_version: 2.2
+  platforms:
+    - name: EL
+      versions:
+        - 7
+  categories:
+    - development
+    - gitlab

@@ -32,10 +32,6 @@
       - /srv/gitlab-runner/config:/etc/gitlab-runner:Z
       - /var/run/docker.sock:/var/run/docker.sock
     env: "{{ runner_config }}"
-    etc_hosts: >
-      {
-        "{{ server_fqdn }}": "{{ hostvars['gitlab']['private_v4'] }}"
-      }
   become: True
   register: runner_start_result
 

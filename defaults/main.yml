@@ -7,8 +7,7 @@ initial_shared_runners_registration_token: "very-secret"
 
 default_runner_config:
   REGISTER_NON_INTERACTIVE: "true"
-  CI_SERVER_URL: "https://{{ server_fqdn }}/ci"
+  CI_SERVER_URL: "https://{{ gitlab_server_fqdn }}/ci"
   RUNNER_NAME: "ubuntu"
   RUNNER_EXECUTOR: "docker"
   DOCKER_IMAGE: "ubuntu"
-  DOCKER_EXTRA_HOSTS: "{{ server_fqdn }}:{{ hostvars['gitlab']['private_v4'] }}"

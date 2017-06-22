@@ -9,6 +9,8 @@ without any hardcoded registration options.
   * Mandatory
     * `runner_configs`: a list of environment variable dictionaries - see below
       for an example
+    * `gitlab_server_fqdn`: the FQDN of the GitLab server that the runner
+      registers to
 
   * Optional
     * `gitlab_runner_tag`: what version of the GitLab runner image to use

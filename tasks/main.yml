@@ -44,6 +44,12 @@
   service: name=docker state=started enabled=yes
   become: True
 
+- name: load overlay kernel module for docker
+  modprobe:
+    name: overlay
+    state: present
+  become: True
+
 - name: upgrade pip so package installs are not broken
   pip:
     name: pip

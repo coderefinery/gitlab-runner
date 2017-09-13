@@ -17,6 +17,28 @@
     - iptables-services
   become: True
 
+- name: disable selinux to permit using hosts docker for builds
+  selinux:
+    state: disabled
+  become: True
+
+- name: disable selinux in docker options
+  copy:
+    dest: /etc/sysconfig/docker
+    content: |
+      OPTIONS='--selinux-enabled=false --log-driver=journald --signature-verification=false'
+      if [ -z "${DOCKER_CERT_PATH}" ]; then
+          DOCKER_CERT_PATH=/etc/docker
+      fi
+      /sbin/setsebool -P docker_transition_unconfined 1
+  become: True
+
+- name: load overlay kernel module for docker
+  modprobe:
+    name: overlay
+    state: present
+  become: True
+
 - name: create docker group
   group:
     name: docker
@@ -40,14 +62,46 @@
     - { name: "docker-py", version: "1.10.5" }
     - { name: "docker-compose", version: "1.9.0" }
 
-- name: start docker
-  service: name=docker state=started enabled=yes
+- name: format docker storage
+  filesystem:
+    dev: "{{ docker_storage_device }}"
+    fstype: xfs
+  when: docker_storage_device is defined
   become: True
 
-- name: load overlay kernel module for docker
-  modprobe:
-    name: overlay
-    state: present
+- name: remove default mount
+  mount:
+    path: /mnt
+    src: /dev/vdb
+    state: absent
+  become: True
+  when: docker_storage_device is defined
+
+- name: mount docker storage
+  mount:
+    path: /var/lib/docker
+    src: "{{ docker_storage_device }}"
+    fstype: xfs
+    opts: noatime
+    state: mounted
+  when: docker_storage_device is defined
+  become: True
+
+- name: setup docker storage
+  blockinfile:
+    dest: /etc/sysconfig/docker-storage-setup
+    block: |
+      {% if docker_storage_driver is defined %}
+      STORAGE_DRIVER={{ docker_storage_driver }}
+      {% endif %}
+      {% if docker_storage_device is defined %}
+      DEVS={{ docker_storage_device }}
+      {% endif %}
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+  become: True
+
+- name: start docker
+  service: name=docker state=started enabled=yes
   become: True
 
 - name: upgrade pip so package installs are not broken
@@ -77,7 +131,6 @@
   become: True
   when: self_signed_certificate|length > 1
 
-
 - name: upload self-signed cert
   copy:
     dest: /srv/gitlab-runner/config/certs/ca.crt
@@ -88,12 +141,6 @@
     mode: 0744
   become: True
   when: self_signed_certificate|length > 1
-
-
-- name: disable selinux to permit using hosts docker for builds
-  selinux:
-    state: disabled
-  become: True
 
 - include: gitlab_runner.yml
   with_items: "{{ runner_configs }}"

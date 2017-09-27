@@ -77,7 +77,6 @@
   become: True
   when: self_signed_certificate|length > 1
 
-
 - name: upload self-signed cert
   copy:
     dest: /srv/gitlab-runner/config/certs/ca.crt
@@ -89,11 +88,27 @@
   become: True
   when: self_signed_certificate|length > 1
 
-
 - name: disable selinux to permit using hosts docker for builds
   selinux:
     state: disabled
   become: True
+
+- name: pull the gitlab-runner image
+  docker_image:
+    name: "gitlab/gitlab-runner:{{ gitlab_runner_tag }}"
+  become: True
+
+- name: make sure daemon container is started
+  docker_container:
+    name: "gitlab-multirunner"
+    image: "gitlab/gitlab-runner:{{ gitlab_runner_tag }}"
+    state: started
+    restart_policy: always
+    volumes:
+      - /srv/gitlab-runner/config:/etc/gitlab-runner:Z
+      - /var/run/docker.sock:/var/run/docker.sock
+  become: True
+  register: runner_start_result
 
 - include: gitlab_runner.yml
   with_items: "{{ runner_configs }}"

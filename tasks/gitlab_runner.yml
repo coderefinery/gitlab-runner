@@ -1,46 +1,53 @@
 - set_fact:
     runner_config: "{{ default_runner_config|combine(item) }}"
 
-- name: get gitlab-runner-{{ runner_config.RUNNER_NAME }} run status
-  shell: docker ps | grep -w "gitlab-runner-{{ runner_config.RUNNER_NAME }}"
-  register: container_run_status
+- name: check runner state
   become: True
+  shell: "grep '  name = .*{{ runner_config.RUNNER_NAME }}' /srv/gitlab-runner/config/config.toml"
+  register: runner_exists
   failed_when: false
   changed_when: false
 
-- name: pull the gitlab-runner image
-  docker_image:
-    name: "gitlab/gitlab-runner:{{ gitlab_runner_tag }}"
-  become: True
-
 - name: unregister runner gitlab-runner-{{ runner_config.RUNNER_NAME }}
-  shell: >
-    docker exec gitlab-runner-{{ runner_config.RUNNER_NAME }}
-    gitlab-ci-multi-runner unregister -n {{ runner_config.RUNNER_NAME }}
-  become: True
-  when: runner_config.state == "absent" and container_run_status.rc == 0
-
-- name: >
-    set state for gitlab-runner-{{ runner_config.RUNNER_NAME }}
-    to {{ runner_config.state }}
   docker_container:
-    name: "gitlab-runner-{{ runner_config.RUNNER_NAME }}"
+    name: "ops-runner-{{ runner_config.RUNNER_NAME }}"
     image: "gitlab/gitlab-runner:{{ gitlab_runner_tag }}"
-    state: "{{ runner_config.state }}"
-    restart_policy: always
+    state: started
+    restart_policy: no
     volumes:
       - /srv/gitlab-runner/config:/etc/gitlab-runner:Z
-      - /var/run/docker.sock:/var/run/docker.sock
     env: "{{ runner_config }}"
+    command: unregister -n {{ runner_config.RUNNER_NAME }}
   become: True
-  register: runner_start_result
+  when:
+    - runner_config.state == "absent"
+    - runner_exists.stdout_lines|length > 0
+
+- name: remove ops container for gitlab-runner-{{ runner_config.RUNNER_NAME }}
+  docker_container:
+    name: "ops-runner-{{ runner_config.RUNNER_NAME }}"
+    state: absent
+  become: True
 
 - name: register runner gitlab-runner-{{ runner_config.RUNNER_NAME }}
-  shell: >
-    docker exec gitlab-runner-{{ runner_config.RUNNER_NAME }}
-    gitlab-ci-multi-runner register
+  docker_container:
+    name: "ops-runner-{{ runner_config.RUNNER_NAME }}"
+    image: "gitlab/gitlab-runner:{{ gitlab_runner_tag }}"
+    state: started
+    restart_policy: no
+    volumes:
+      - /srv/gitlab-runner/config:/etc/gitlab-runner:Z
+    env: "{{ runner_config }}"
+    command: register
   become: True
-  when: runner_start_result.changed and
-        runner_config.state == "started" and
-        runner_config.REGISTRATION_TOKEN is defined and
-        runner_config.REGISTRATION_TOKEN != ""
+  when:
+    - runner_config.state == "started"
+    - runner_config.REGISTRATION_TOKEN is defined
+    - runner_config.REGISTRATION_TOKEN != ""
+    - runner_exists.stdout_lines|length == 0
+
+- name: remove ops container for gitlab-runner-{{ runner_config.RUNNER_NAME }}
+  docker_container:
+    name: "ops-runner-{{ runner_config.RUNNER_NAME }}"
+    state: absent
+  become: True

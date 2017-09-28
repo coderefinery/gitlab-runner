@@ -1,8 +1,8 @@
 # GitLab runner Ansible role
 
-Configure a GitLab runner using Ansible. Uses Docker to run the multirunner.
-Allows flexible configuration during registration via environment variables
-without any hardcoded registration options.
+Configure a GitLab runner using Ansible. Supports containerized and rpm-based 
+installation of the multirunner. Allows flexible configuration during registration 
+via environment variables without any hardcoded registration options.
 
 ## Variables
 
@@ -20,6 +20,12 @@ without any hardcoded registration options.
     * `initial_shared_runners_registration_token`: the token used for shared
       runners (you don't need to set this if you don't plan to have shared
       runners)
+    * `runner_deployment_type`: whether to deploy the runners by creating a
+      "gitlab-runner" Docker container per runner configuration (option 'docker')
+      or by installing a native binary from GitLab's yum repository (option 'rpm').
+      The default is 'docker'.
+    * `runner_concurrency`: optionally set global 'concurrent' -parameter
+      in the gitlab-runner config file.
 
 ## Runner configuration
 

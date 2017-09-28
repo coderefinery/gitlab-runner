@@ -11,3 +11,5 @@ default_runner_config:
   RUNNER_NAME: "ubuntu"
   RUNNER_EXECUTOR: "docker"
   DOCKER_IMAGE: "ubuntu"
+
+runner_deployment_type: 'docker'

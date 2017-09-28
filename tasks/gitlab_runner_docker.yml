@@ -40,7 +40,8 @@
     docker exec gitlab-runner-{{ runner_config.RUNNER_NAME }}
     gitlab-ci-multi-runner register
   become: True
-  when: runner_start_result.changed and
-        runner_config.state == "started" and
-        runner_config.REGISTRATION_TOKEN is defined and
-        runner_config.REGISTRATION_TOKEN != ""
+  when:
+    - runner_start_result.changed
+    - runner_config.state == "started"
+    - runner_config.REGISTRATION_TOKEN is defined
+    - runner_config.REGISTRATION_TOKEN != ""

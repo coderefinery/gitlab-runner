@@ -1,0 +1,31 @@
+- set_fact:
+    runner_config: "{{ default_runner_config|combine(item) }}"
+
+- name: get gitlab-runner-{{ runner_config.RUNNER_NAME }} run status
+  shell: gitlab-runner list 2>&1 | grep -w "^{{ runner_config.RUNNER_NAME }} "
+  register: runner_status
+  become: True
+  failed_when: false
+  changed_when: false
+
+- name: unregister runner gitlab-runner-{{ runner_config.RUNNER_NAME }}
+  shell: >
+    docker exec gitlab-runner-{{ runner_config.RUNNER_NAME }}
+    gitlab-ci-multi-runner unregister -n {{ runner_config.RUNNER_NAME }}
+  become: True
+  when:
+    - runner_config.state == "absent"
+    - runner_status.rc == 0
+
+- name: register runner gitlab-runner-{{ runner_config.RUNNER_NAME }}
+  shell: |
+    {% for var in runner_config %}
+    export {{ var }}="{{ runner_config[var] }}"
+    {% endfor %}
+    gitlab-runner register
+  become: True
+  when:
+    - runner_status.rc == 1
+    - runner_config.state == "started"
+    - runner_config.REGISTRATION_TOKEN is defined
+    - runner_config.REGISTRATION_TOKEN != ""

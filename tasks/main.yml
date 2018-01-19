@@ -1,4 +1,38 @@
 ---
+- name: format block device to be used for Docker storage
+  filesystem:
+    fstype: xfs
+    dev: "{{ docker_storage_device }}"
+    opts: -n ftype=1
+  when: docker_storage_device is defined
+  become: True
+
+- name: ensure /var/lib/docker exists
+  file:
+    state: directory
+    path: "/var/lib/docker"
+    mode: 0711
+    owner: root
+    group: root
+  when: docker_storage_device is defined
+  become: True
+
+- name: mount filesystem from separate block device under /var/lib/docker
+  mount:
+    path: "/var/lib/docker"
+    src: "{{ docker_storage_device }}"
+    fstype: xfs
+    state: mounted
+  when: docker_storage_device is defined
+  become: True
+
+- name: create config for Docker storage setup
+  copy:
+    content: "STORAGE_DRIVER=overlay"
+    dest: "/etc/sysconfig/docker-storage-setup"
+  when: docker_storage_device is defined
+  become: True
+
 - name: install yum packages
   yum:
     state: installed
@@ -40,14 +74,14 @@
     - { name: "docker-py", version: "1.10.5" }
     - { name: "docker-compose", version: "1.9.0" }
 
-- name: start docker
-  service: name=docker state=started enabled=yes
-  become: True
-
 - name: load overlay kernel module for docker
   modprobe:
     name: overlay
     state: present
+  become: True
+
+- name: start docker
+  service: name=docker state=started enabled=yes
   become: True
 
 - name: upgrade pip so package installs are not broken

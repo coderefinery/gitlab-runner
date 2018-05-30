@@ -28,7 +28,7 @@
 
 - name: create config for Docker storage setup
   copy:
-    content: "STORAGE_DRIVER=overlay"
+    content: "STORAGE_DRIVER=overlay2"
     dest: "/etc/sysconfig/docker-storage-setup"
   when: docker_storage_device is defined
   become: True

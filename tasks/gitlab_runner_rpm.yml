@@ -10,7 +10,6 @@
 
 - name: unregister runner gitlab-runner-{{ runner_config.RUNNER_NAME }}
   shell: >
-    docker exec gitlab-runner-{{ runner_config.RUNNER_NAME }}
     gitlab-ci-multi-runner unregister -n {{ runner_config.RUNNER_NAME }}
   become: True
   when:
